@@ -1,0 +1,133 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-latest
+            archive_name: PT2399-macos.zip
+          - name: Linux-amd64
+            os: ubuntu-latest
+            archive_name: PT2399-linux-amd64.zip
+          - name: Windows
+            os: windows-latest
+            archive_name: PT2399-windows.zip
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build/install/PT2399UGen"
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake -S . -B build `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}\build\install\PT2399UGen"
+
+      - name: Build and install (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: 4
+        run: cmake --build build --config Release --target install
+
+      - name: Build and install (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: 4
+        run: cmake --build build --config Release --target install
+
+      - name: Archive (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cd build/install
+          zip -r "${{ matrix.archive_name }}" PT2399UGen
+
+      - name: Archive (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "${{ github.workspace }}\build\install\PT2399UGen" `
+            -DestinationPath "${{ github.workspace }}\build\install\${{ matrix.archive_name }}"
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ github.workspace }}/build/install/${{ matrix.archive_name }}
+          asset_name: ${{ matrix.archive_name }}
+          overwrite: true
+          prerelease: true
+          tag: ${{ github.ref }}
+
+  build-linux-arm64:
+    name: Linux-arm64 (Raspberry Pi 64-bit)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install cross-toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - name: Configure (arm64)
+        run: |
+          cmake -S . -B build-arm64 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build-arm64/install/PT2399UGen"
+
+      - name: Build and install (arm64)
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: 4
+        run: cmake --build build-arm64 --config Release --target install
+
+      - name: Archive (arm64)
+        run: |
+          cd build-arm64/install
+          zip -r PT2399-linux-arm64.zip PT2399UGen
+
+      - name: Upload arm64 binary to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ github.workspace }}/build-arm64/install/PT2399-linux-arm64.zip
+          asset_name: PT2399-linux-arm64.zip
+          overwrite: true
+          prerelease: true
+          tag: ${{ github.ref }}

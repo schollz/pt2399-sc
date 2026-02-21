@@ -1,0 +1,75 @@
+CLASS:: PT2399
+SUMMARY:: PT2399-based delay UGen
+CATEGORIES:: UGen>Effects
+
+DESCRIPTION::
+`PT2399` is a single-channel delay effect based on the PT2399 DSM model used in the ONE-BIT DELAY plugin by Infinite Digits.
+All plugin parameters are exposed as UGen inputs. `oversample` is sampled only at UGen creation time (init-rate behavior).
+
+CLASSMETHODS::
+METHOD:: ar
+ARGUMENT:: in
+Audio-rate input signal.
+ARGUMENT:: inputLevel
+Input level in dB.
+ARGUMENT:: dryLevel
+Dry level in dB.
+ARGUMENT:: wetLevel
+Wet level in dB.
+ARGUMENT:: delayTime
+Delay time in milliseconds (mapped internally to PT2399 pin 6 resistance).
+ARGUMENT:: feedbackHpf
+Feedback high-pass corner in Hz.
+ARGUMENT:: feedback
+Feedback amount (0..2).
+ARGUMENT:: c3
+C3 capacitor in nF.
+ARGUMENT:: c6
+C6 capacitor in nF.
+ARGUMENT:: brightness
+Brightness percent (0..100).
+ARGUMENT:: boostActivated
+Boolean-ish (>=0.5 true).
+ARGUMENT:: passthrough
+Boolean-ish (>=0.5 true).
+ARGUMENT:: oversample
+Oversampling index at creation time. Allowed values: 0->1x, 1->2x, 3->4x, 4->8x, 5->16x, 6->32x. Any other value defaults to 16x.
+
+EXAMPLES::
+code::
+(
+Server.default = s = Server.local;
+
+s.boot;
+
+s.waitForBoot {
+    var b;
+
+    b = Buffer.read(s, Platform.resourceDir +/+ "sounds/a11wlk01.wav");
+
+    SynthDef(\help_PlayBuf, { |out = 0, bufnum = 0|
+        var src;
+        var fx;
+
+        src = PlayBuf.ar(1, bufnum, BufRateScale.kr(bufnum), loop: 1);
+        fx = PT2399.ar(
+            src,
+            inputLevel: 0,
+            dryLevel: -6,
+            wetLevel: 0,
+            delayTime: MouseX.kr(50, 500),
+            feedbackHpf: 80,
+            feedback: MouseY.kr(0.0, 2.0),
+            c3: 100,
+            c6: 100,
+            brightness: 20,
+            boostActivated: 0,
+            passthrough: 0,
+            oversample: 5
+        );
+
+        Out.ar(out, fx ! 2);
+    }).play(s, [\out, 0, \bufnum, b]);
+};
+)
+::
