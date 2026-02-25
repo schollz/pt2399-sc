@@ -14,6 +14,12 @@ Support the development of this and all my work buy [sponsoring me](https://gith
 
 Go to [releases](https://github.com/schollz/pt2399/releases/latest), download the `.zip` file for your system and unzip it into the SuperCollider Extensions directory: `~/.local/share/SuperCollider/Extensions`.
 
+On Raspberry Pi/Linux ARM, match your userspace architecture:
+- `PT2399-linux-arm64.zip`: 64-bit Raspberry Pi OS (`aarch64`)
+- `PT2399-linux-armhf.zip`: 32-bit Raspberry Pi OS (`armv7l`/`armhf`)
+
+If you see `wrong ELF class: ELFCLASS64`, you are trying to load a 64-bit plugin into a 32-bit SuperCollider process.
+
 ## Install from source
 
 
@@ -28,4 +34,3 @@ make install
 ```bash
 make test
 ```
-

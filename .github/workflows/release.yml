@@ -2,6 +2,11 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      targets:
+        description: "Comma-separated targets to build: macos,linux-amd64,windows,linux-arm64,linux-armhf (or all)"
+        required: false
+        default: "all"
   push:
     tags:
       - "v*"
@@ -13,18 +18,22 @@ jobs:
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    if: github.event_name != 'workflow_dispatch' || contains(format(',{0},', inputs.targets), ',all,') || contains(format(',{0},', inputs.targets), format(',{0},', matrix.target))
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: macOS
             os: macos-latest
+            target: macos
             archive_name: PT2399-macos.zip
           - name: Linux-amd64
             os: ubuntu-latest
+            target: linux-amd64
             archive_name: PT2399-linux-amd64.zip
           - name: Windows
             os: windows-latest
+            target: windows
             archive_name: PT2399-windows.zip
 
     steps:
@@ -91,6 +100,7 @@ jobs:
   build-linux-arm64:
     name: Linux-arm64 (Raspberry Pi 64-bit)
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || contains(format(',{0},', inputs.targets), ',all,') || contains(format(',{0},', inputs.targets), ',linux-arm64,')
 
     steps:
       - name: Checkout
@@ -118,6 +128,9 @@ jobs:
           CMAKE_BUILD_PARALLEL_LEVEL: 4
         run: cmake --build build-arm64 --config Release --target install
 
+      - name: Verify binary architecture (arm64)
+        run: file build-arm64/install/PT2399UGen/plugins/PT2399UGens.so
+
       - name: Archive (arm64)
         run: |
           cd build-arm64/install
@@ -129,6 +142,55 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ github.workspace }}/build-arm64/install/PT2399-linux-arm64.zip
           asset_name: PT2399-linux-arm64.zip
+          overwrite: true
+          prerelease: true
+          tag: ${{ github.ref }}
+
+  build-linux-armhf:
+    name: Linux-armhf (Raspberry Pi 32-bit)
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || contains(format(',{0},', inputs.targets), ',all,') || contains(format(',{0},', inputs.targets), ',linux-armhf,')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install cross-toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+
+      - name: Configure (armhf)
+        run: |
+          cmake -S . -B build-armhf \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_SYSTEM_PROCESSOR=armv7l \
+            -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc \
+            -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build-armhf/install/PT2399UGen"
+
+      - name: Build and install (armhf)
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: 4
+        run: cmake --build build-armhf --config Release --target install
+
+      - name: Verify binary architecture (armhf)
+        run: file build-armhf/install/PT2399UGen/plugins/PT2399UGens.so
+
+      - name: Archive (armhf)
+        run: |
+          cd build-armhf/install
+          zip -r PT2399-linux-armhf.zip PT2399UGen
+
+      - name: Upload armhf binary to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ github.workspace }}/build-armhf/install/PT2399-linux-armhf.zip
+          asset_name: PT2399-linux-armhf.zip
           overwrite: true
           prerelease: true
           tag: ${{ github.ref }}
