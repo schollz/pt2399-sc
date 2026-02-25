@@ -179,7 +179,7 @@ jobs:
           tag: ${{ github.ref }}
 
       - name: Upload arm64 artifact (7 days)
-        if: '!startsWith(github.ref, ''refs/tags/v'')'
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         uses: actions/upload-artifact@v4
         with:
           name: PT2399-linux-arm64.zip
@@ -237,7 +237,7 @@ jobs:
           tag: ${{ github.ref }}
 
       - name: Upload armhf artifact (7 days)
-        if: '!startsWith(github.ref, ''refs/tags/v'')'
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         uses: actions/upload-artifact@v4
         with:
           name: PT2399-linux-armhf.zip
