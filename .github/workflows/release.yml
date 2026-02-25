@@ -3,10 +3,31 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      targets:
-        description: "Comma-separated targets to build: macos,linux-amd64,windows,linux-arm64,linux-armhf (or all)"
+      build_macos:
+        description: "Build macOS"
+        type: boolean
         required: false
-        default: "all"
+        default: true
+      build_linux_amd64:
+        description: "Build Linux amd64"
+        type: boolean
+        required: false
+        default: true
+      build_windows:
+        description: "Build Windows"
+        type: boolean
+        required: false
+        default: true
+      build_linux_arm64:
+        description: "Build Linux arm64 (Raspberry Pi 64-bit)"
+        type: boolean
+        required: false
+        default: true
+      build_linux_armhf:
+        description: "Build Linux armhf (Raspberry Pi 32-bit)"
+        type: boolean
+        required: false
+        default: true
   push:
     tags:
       - "v*"
@@ -18,7 +39,11 @@ jobs:
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    if: github.event_name != 'workflow_dispatch' || contains(format(',{0},', inputs.targets), ',all,') || contains(format(',{0},', inputs.targets), format(',{0},', matrix.target))
+    if: |
+      github.event_name != 'workflow_dispatch' ||
+      (matrix.target == 'macos' && inputs.build_macos) ||
+      (matrix.target == 'linux-amd64' && inputs.build_linux_amd64) ||
+      (matrix.target == 'windows' && inputs.build_windows)
     strategy:
       fail-fast: false
       matrix:
@@ -100,7 +125,7 @@ jobs:
   build-linux-arm64:
     name: Linux-arm64 (Raspberry Pi 64-bit)
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || contains(format(',{0},', inputs.targets), ',all,') || contains(format(',{0},', inputs.targets), ',linux-arm64,')
+    if: github.event_name != 'workflow_dispatch' || inputs.build_linux_arm64
 
     steps:
       - name: Checkout
@@ -149,7 +174,7 @@ jobs:
   build-linux-armhf:
     name: Linux-armhf (Raspberry Pi 32-bit)
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || contains(format(',{0},', inputs.targets), ',all,') || contains(format(',{0},', inputs.targets), ',linux-armhf,')
+    if: github.event_name != 'workflow_dispatch' || inputs.build_linux_armhf
 
     steps:
       - name: Checkout
