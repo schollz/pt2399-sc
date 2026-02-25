@@ -110,7 +110,7 @@ jobs:
             -DestinationPath "${{ github.workspace }}\build\install\${{ matrix.archive_name }}"
 
       - name: Upload binaries to release
-        if: github.event_name != 'workflow_dispatch' || (matrix.target == 'macos' && inputs.build_macos) || (matrix.target == 'linux-amd64' && inputs.build_linux_amd64) || (matrix.target == 'windows' && inputs.build_windows)
+        if: (github.event_name != 'workflow_dispatch' || (matrix.target == 'macos' && inputs.build_macos) || (matrix.target == 'linux-amd64' && inputs.build_linux_amd64) || (matrix.target == 'windows' && inputs.build_windows)) && startsWith(github.ref, 'refs/tags/v')
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -119,6 +119,14 @@ jobs:
           overwrite: true
           prerelease: true
           tag: ${{ github.ref }}
+
+      - name: Upload build artifact (7 days)
+        if: (github.event_name != 'workflow_dispatch' || (matrix.target == 'macos' && inputs.build_macos) || (matrix.target == 'linux-amd64' && inputs.build_linux_amd64) || (matrix.target == 'windows' && inputs.build_windows)) && !startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive_name }}
+          path: ${{ github.workspace }}/build/install/${{ matrix.archive_name }}
+          retention-days: 7
 
   build-linux-arm64:
     name: Linux-arm64 (Raspberry Pi 64-bit)
@@ -160,6 +168,7 @@ jobs:
           zip -r PT2399-linux-arm64.zip PT2399UGen
 
       - name: Upload arm64 binary to release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -168,6 +177,14 @@ jobs:
           overwrite: true
           prerelease: true
           tag: ${{ github.ref }}
+
+      - name: Upload arm64 artifact (7 days)
+        if: '!startsWith(github.ref, ''refs/tags/v'')'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PT2399-linux-arm64.zip
+          path: ${{ github.workspace }}/build-arm64/install/PT2399-linux-arm64.zip
+          retention-days: 7
 
   build-linux-armhf:
     name: Linux-armhf (Raspberry Pi 32-bit)
@@ -209,6 +226,7 @@ jobs:
           zip -r PT2399-linux-armhf.zip PT2399UGen
 
       - name: Upload armhf binary to release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -217,3 +235,11 @@ jobs:
           overwrite: true
           prerelease: true
           tag: ${{ github.ref }}
+
+      - name: Upload armhf artifact (7 days)
+        if: '!startsWith(github.ref, ''refs/tags/v'')'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PT2399-linux-armhf.zip
+          path: ${{ github.workspace }}/build-armhf/install/PT2399-linux-armhf.zip
+          retention-days: 7
