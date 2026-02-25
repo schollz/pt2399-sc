@@ -39,11 +39,7 @@ jobs:
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    if: |
-      github.event_name != 'workflow_dispatch' ||
-      (matrix.target == 'macos' && inputs.build_macos) ||
-      (matrix.target == 'linux-amd64' && inputs.build_linux_amd64) ||
-      (matrix.target == 'windows' && inputs.build_windows)
+    if: github.event_name != 'workflow_dispatch' || inputs.build_macos || inputs.build_linux_amd64 || inputs.build_windows
     strategy:
       fail-fast: false
       matrix:
@@ -63,12 +59,13 @@ jobs:
 
     steps:
       - name: Checkout
+        if: github.event_name != 'workflow_dispatch' || (matrix.target == 'macos' && inputs.build_macos) || (matrix.target == 'linux-amd64' && inputs.build_linux_amd64) || (matrix.target == 'windows' && inputs.build_windows)
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
       - name: Configure (Unix)
-        if: runner.os != 'Windows'
+        if: (github.event_name != 'workflow_dispatch' || (matrix.target == 'macos' && inputs.build_macos) || (matrix.target == 'linux-amd64' && inputs.build_linux_amd64) || (matrix.target == 'windows' && inputs.build_windows)) && runner.os != 'Windows'
         shell: bash
         run: |
           cmake -S . -B build \
@@ -76,7 +73,7 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build/install/PT2399UGen"
 
       - name: Configure (Windows)
-        if: runner.os == 'Windows'
+        if: (github.event_name != 'workflow_dispatch' || (matrix.target == 'macos' && inputs.build_macos) || (matrix.target == 'linux-amd64' && inputs.build_linux_amd64) || (matrix.target == 'windows' && inputs.build_windows)) && runner.os == 'Windows'
         shell: pwsh
         run: |
           cmake -S . -B build `
@@ -84,28 +81,28 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}\build\install\PT2399UGen"
 
       - name: Build and install (Unix)
-        if: runner.os != 'Windows'
+        if: (github.event_name != 'workflow_dispatch' || (matrix.target == 'macos' && inputs.build_macos) || (matrix.target == 'linux-amd64' && inputs.build_linux_amd64) || (matrix.target == 'windows' && inputs.build_windows)) && runner.os != 'Windows'
         shell: bash
         env:
           CMAKE_BUILD_PARALLEL_LEVEL: 4
         run: cmake --build build --config Release --target install
 
       - name: Build and install (Windows)
-        if: runner.os == 'Windows'
+        if: (github.event_name != 'workflow_dispatch' || (matrix.target == 'macos' && inputs.build_macos) || (matrix.target == 'linux-amd64' && inputs.build_linux_amd64) || (matrix.target == 'windows' && inputs.build_windows)) && runner.os == 'Windows'
         shell: pwsh
         env:
           CMAKE_BUILD_PARALLEL_LEVEL: 4
         run: cmake --build build --config Release --target install
 
       - name: Archive (Unix)
-        if: runner.os != 'Windows'
+        if: (github.event_name != 'workflow_dispatch' || (matrix.target == 'macos' && inputs.build_macos) || (matrix.target == 'linux-amd64' && inputs.build_linux_amd64) || (matrix.target == 'windows' && inputs.build_windows)) && runner.os != 'Windows'
         shell: bash
         run: |
           cd build/install
           zip -r "${{ matrix.archive_name }}" PT2399UGen
 
       - name: Archive (Windows)
-        if: runner.os == 'Windows'
+        if: (github.event_name != 'workflow_dispatch' || (matrix.target == 'macos' && inputs.build_macos) || (matrix.target == 'linux-amd64' && inputs.build_linux_amd64) || (matrix.target == 'windows' && inputs.build_windows)) && runner.os == 'Windows'
         shell: pwsh
         run: |
           Compress-Archive `
@@ -113,6 +110,7 @@ jobs:
             -DestinationPath "${{ github.workspace }}\build\install\${{ matrix.archive_name }}"
 
       - name: Upload binaries to release
+        if: github.event_name != 'workflow_dispatch' || (matrix.target == 'macos' && inputs.build_macos) || (matrix.target == 'linux-amd64' && inputs.build_linux_amd64) || (matrix.target == 'windows' && inputs.build_windows)
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
